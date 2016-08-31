@@ -76,6 +76,7 @@ void FlameSolver::initialize(void)
     if (options.wallFlux) {
         diffusionTerms[kEnergy].yInf = options.Tinf;
         diffusionTerms[kEnergy].wallConst = options.Kwall;
+        rVzero = options.rvWall * rhoLeft;
     }
 
     resizeAuxiliary();
@@ -142,6 +143,8 @@ void FlameSolver::setupStep()
     updateBC();
     if (options.xFlameControl) {
         update_xStag(t, true); // calculate the value of rVzero
+    } else if (options.wallFlux) {
+        rVzero = options.rvWall * rhoLeft;
     }
     convectionSystem.set_rVzero(rVzero);
     setupTimer.stop();
