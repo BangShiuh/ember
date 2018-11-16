@@ -1,8 +1,6 @@
 #pragma once
 
-#include "mathUtils.h"
-#include "grid.h"
-#include "integrator.h"
+#include "diffusionSystem.h"
 
 //! System representing diffusion of a single solution component.
 //! Represents an ODE in one of the following forms:
@@ -13,34 +11,19 @@
 //! where the entries of the matrix *A* are determined by the prefactor *B*,
 //! the diffusion coefficients *D*, the boundary conditions and the finite
 //! difference formulas used.
-class DiffusionSystem : public TridiagonalODE, public GridBased
+class DriftDiffusionSystem : public DiffusionSystem
 {
 public:
-    DiffusionSystem();
+    DriftDiffusionSystem();
 
     //! Build the matrix *A* describing the linear %ODE. `a[j]`, `b[j]`, and
     //! `c[j]` are respectivley the subdiagonal, diagonal, and superdiagonal
     //! elements of row `j`.
     virtual void get_A(dvec& a, dvec& b, dvec& c);
 
-    void get_k(dvec& k);
     virtual void resize(size_t N);
 
-    //! Set the splitting constant *C* to zero.
-    void resetSplitConstants();
-
-    dvec B; //!< scaling factor for the spatial derivative
-    dvec D; //!< diffusion coefficient or equivalent
-    dvec mu; //!< mobility or equivalent
-    dvec E; //!< electric field or equivalent
-    dvec splitConst; //!< Balancing constant introduced by the splitting method
-    size_t N; //!< Number of points in the region to be solved
-
-    double yInf; //!< reference value for wall flux boundary condition
-    double wallConst; //!< wall flux proportionality constant
-
-protected:
+private:
     // constants used to compute the matrix coefficients
-    dvec c1;
-    dvec c2;
+    dvec c3;
 };

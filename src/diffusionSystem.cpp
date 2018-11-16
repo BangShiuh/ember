@@ -11,12 +11,10 @@ void DiffusionSystem::get_A(dvec& a, dvec& b, dvec& c)
 {
     assert(mathUtils::notnan(D));
     assert(mathUtils::notnan(B));
-
     for (size_t j=1; j<=N-2; j++) {
         c1[j] = 0.5*B[j]/(dlj[j]*r[j]);
         c2[j] = rphalf[j]*(D[j]+D[j+1])/hh[j];
     }
-
     assert(mathUtils::notnan(c1));
     assert(mathUtils::notnan(c2));
 
@@ -43,7 +41,6 @@ void DiffusionSystem::get_A(dvec& a, dvec& b, dvec& c)
         b[1] = -c1[1]*c2[1];
         c[1] = c1[1]*c2[1];
     }
-
     // Right boundary value
     size_t jStop;
     if (grid.rightBC == BoundaryCondition::FixedValue) {
@@ -56,7 +53,6 @@ void DiffusionSystem::get_A(dvec& a, dvec& b, dvec& c)
         a[N-2] = c1[N-2]*c2[N-3];
         b[N-2] = -c1[N-2]*c2[N-3];
     }
-
     // Intermediate points
     for (size_t j=jStart; j<jStop; j++) {
         a[j] = c1[j]*c2[j-1];
