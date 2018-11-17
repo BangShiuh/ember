@@ -6,6 +6,7 @@
 #include "cantera/kinetics/importKinetics.h"
 #include "cantera/transport/MixTransport.h"
 #include "cantera/transport/MultiTransport.h"
+#include "cantera/transport/IonGasTransport.h"
 
 ApproxMixTransport::ApproxMixTransport()
     : _threshold(0.0)
@@ -396,6 +397,8 @@ void CanteraGas::initialize()
         transport = new Cantera::MultiTransport();
     } else if (transportModel == "Mix") {
         transport = new Cantera::MixTransport();
+    } else if (transportModel == "Ion") {
+        transport = new Cantera::IonGasTransport();
     } else if (transportModel == "Approx") {
         ApproxMixTransport* atran = new ApproxMixTransport();
         atran->setThreshold(transportThreshold);
@@ -406,6 +409,16 @@ void CanteraGas::initialize()
     transport->init(&thermo);
 
     nSpec = thermo.nSpecies();
+
+    // Find indices for species
+    for (size_t k = 0; k < nSpec; k++){
+        if (thermo.charge(k) == 0){
+            kNeutral.push_back(k);
+        } else {
+            kCharge.push_back(k);
+        }
+    }
+
     Dbin.setZero(nSpec,nSpec);
     isInitialized = true;
 }
@@ -430,14 +443,14 @@ void CanteraGas::setStateMole(const double* X, const double T)
     thermo.setState_TPX(T, pressure, X);
 }
 
-void CanteraGas::getMoleFractions(dvec& X) const
-{
-    thermo.getMoleFractions(X.data());
-}
-
 void CanteraGas::getMoleFractions(double* X) const
 {
     thermo.getMoleFractions(X);
+}
+
+void CanteraGas::getMoleFractions(dvec& X) const
+{
+    thermo.getMoleFractions(X.data());
 }
 
 void CanteraGas::getMassFractions(double* Y) const
@@ -490,6 +503,43 @@ void CanteraGas::getDiffusionCoefficientsMole(dvec& Dkm) const
 void CanteraGas::getDiffusionCoefficientsMole(double* Dkm) const
 {
     transport->getMixDiffCoeffs(Dkm);
+}
+
+void CanteraGas::getMobilities(dvec& mobi_km) const
+{
+    transport->getMobilities(mobi_km.data());
+}
+
+void CanteraGas::getMobilities(double* mobi_km) const
+{
+    transport->getMobilities(mobi_km);
+}
+
+void CanteraGas::getWeightedMobilities(dvec& rho_mobi) const
+{
+    getWeightedMobilities(rho_mobi.data());
+}
+
+void CanteraGas::getWeightedMobilities(double* rho_mobi) const
+{
+    transport->getMobilities(rho_mobi);
+    double rho = thermo.density();
+    for (size_t k=0; k<nSpec; k++) {
+        rho_mobi[k] *= rho;
+    }
+}
+
+double CanteraGas::getChargeDensity() const
+{
+    dvec X(nSpec);
+    getMoleFractions(X);
+    double sum = 0.0;
+    for (size_t k=0; k<nSpec; k++) {
+        double ND = X[k]*pressure
+                    /(Cantera::Boltzmann*thermo.temperature());
+        sum += getSpeciesCharge(k) * Cantera::ElectronCharge * ND;
+    }
+    return sum;
 }
 
 void CanteraGas::getWeightedDiffusionCoefficientsMole(dvec& rhoD) const
@@ -595,4 +645,9 @@ void CanteraGas::getDestructionRates(dvec& wDot) const
 void CanteraGas::getDestructionRates(double* wDot) const
 {
     kinetics->getDestructionRates(wDot);
+}
+
+int CanteraGas::getSpeciesCharge(size_t k) const
+{
+    return thermo.charge(k);
 }

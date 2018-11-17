@@ -466,6 +466,7 @@ void FlameSolver::resizeAuxiliary()
     jCorr.resize(nPoints);
     sumcpj.setZero(nPoints);
     qDot.resize(nPoints);
+    chargeDensity.setZero(nPoints);
     cpSpec.resize(nSpec, nPoints);
     rhoD.resize(nSpec, nPoints);
     Dkt.resize(nSpec, nPoints);
@@ -930,7 +931,6 @@ void FlameSolver::calculateQdot()
     }
     reactionRatesTimer.stop();
 }
-
 
 void FlameSolver::correctMassFractions() {
     setupTimer.resume();

@@ -126,6 +126,7 @@ public:
     dvec jCorr; //!< Correction to ensure sum of mass fractions = 1
     dvec sumcpj; //!< part of the enthalpy flux term
     dvec qDot; //!< Heat release rate [W/m^3]
+    dvec chargeDensity; //! Charge density [C/m^3]
     dmatrix wDot; //!< species production rates [kmol/m^3*s]
     dvec Wmx; //!< mixture molecular weight [kg/kmol]
     dvec W; //!< species molecular weights [kg/kmol]
