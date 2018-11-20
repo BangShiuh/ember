@@ -365,7 +365,7 @@ class Chemistry(Options):
     phaseID = StringOption("", level=1)
 
     #: Transport model to use. Valid options are ``Mix``, ``Multi``, and ``Approx``
-    transportModel = StringOption("Approx", ("Mix", "Multi"), level=1)
+    transportModel = StringOption("Approx", ("Mix", "Multi", "Ion"), level=1)
 
     #: Kinetics model to use. Valid options are ``standard`` and ``interp``.
     kineticsModel = StringOption("interp", ("standard",), level=2)

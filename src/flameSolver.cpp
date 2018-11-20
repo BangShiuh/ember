@@ -67,7 +67,16 @@ void FlameSolver::initialize(void)
     convectionSystem.setTolerances(options);
 
     for (size_t k=0; k<nVars; k++) {
-        DiffusionSystem* term = new DiffusionSystem();
+        DiffusionSystem* term;
+        if (options.transportModel == "Ion") {
+            if (k >= kSpecies && gas.getSpeciesCharge(k) != 0) {
+                term = new DriftDiffusionSystem();
+            } else {
+                term = new DiffusionSystem();
+            }
+        } else {
+            term = new DiffusionSystem();
+        }
         TridiagonalIntegrator* integrator = new TridiagonalIntegrator(*term);
         integrator->resize(nPoints);
         diffusionTerms.push_back(term);
@@ -85,6 +94,7 @@ void FlameSolver::initialize(void)
     ddtProd.setZero();
 
     updateChemicalProperties();
+    updateElectricField();
     calculateQdot();
 
     t = tStart;
@@ -138,7 +148,7 @@ void FlameSolver::setupStep()
     }
 
     updateChemicalProperties();
-
+    updateElectricField();
     updateBC();
     if (options.xFlameControl) {
         update_xStag(t, true); // calculate the value of rVzero
@@ -166,6 +176,13 @@ void FlameSolver::prepareIntegrators()
         for (size_t k=0; k<nSpec; k++) {
             diffusionTerms[kSpecies+k].B =rho.inverse();
             diffusionTerms[kSpecies+k].D = rhoD.row(k);
+        }
+
+        if (options.transportModel == "Ion") {
+            for (size_t k : gas.kCharge) {
+                diffusionTerms[kSpecies+k].mu = rhoMobi.row(k);
+                diffusionTerms[kSpecies+k].E = E;
+            }
         }
     } else {
         // Diffusion solvers: Energy and momentum
@@ -466,9 +483,11 @@ void FlameSolver::resizeAuxiliary()
     jCorr.resize(nPoints);
     sumcpj.setZero(nPoints);
     qDot.resize(nPoints);
-    chargeDensity.setZero(nPoints);
+    chargeDensity.resize(nPoints);
+    E.resize(nPoints);
     cpSpec.resize(nSpec, nPoints);
     rhoD.resize(nSpec, nPoints);
+    rhoMobi.resize(nSpec, nPoints);
     Dkt.resize(nSpec, nPoints);
     wDot.resize(nSpec, nPoints);
     hk.resize(nSpec, nPoints);
@@ -669,6 +688,7 @@ void FlameSolver::updateChemicalProperties(size_t j1, size_t j2)
         rho[j] = gas.getDensity();
         Wmx[j] = gas.getMixtureMolecularWeight();
         cp[j] = gas.getSpecificHeatCapacity();
+        chargeDensity[j] = gas.getChargeDensity();
         gas.getSpecificHeatCapacities(&cpSpec(0,j));
         gas.getEnthalpies(&hk(0,j));
         thermoTimer.stop();
@@ -686,12 +706,22 @@ void FlameSolver::updateChemicalProperties(size_t j1, size_t j2)
 
         diffusivityTimer.start();
         gas.getWeightedDiffusionCoefficientsMass(&rhoD(0,j));
+        gas.getWeightedMobilities(&rhoMobi(0,j));
         gas.getThermalDiffusionCoefficients(&Dkt(0,j));
         diffusivityTimer.stop();
         transportTimer.stop();
     }
 }
 
+void FlameSolver::updateElectricField()
+{
+    // use first order differential
+    E[0] = 0;
+    for (size_t j=1; j<nPoints; j++) {
+        E[j] = E[j-1] + 0.5*(chargeDensity[j] + chargeDensity[j-1]) 
+                        / Cantera::epsilon_0 * hh[j-1];
+    }
+}
 
 void FlameSolver::setDiffusionSolverState(double tInitial)
 {

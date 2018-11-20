@@ -9,6 +9,7 @@
 #include "integrator.h"
 #include "sourceSystem.h"
 #include "diffusionSystem.h"
+#include "driftDiffusionSystem.h"
 #include "convectionSystem.h"
 #include "quasi2d.h"
 #include "callback.h"
@@ -95,6 +96,7 @@ public:
     void updateChemicalProperties(); //!< Update thermodynamic, transport, and kinetic properties
     void updateChemicalProperties(size_t j1, size_t j2); //!< Update thermodynamic, transport, and kinetic properties
     void updateBC(); //!< Set boundary condition for left edge of domain
+    void updateElectricField(); //!< Update electric field
     void calculateQdot(); //!< Compute heat release rate using the current temperature and mass fractions
 
     //! Correct the drift of the total mass fractions and reset any negative mass fractions.
@@ -127,6 +129,7 @@ public:
     dvec sumcpj; //!< part of the enthalpy flux term
     dvec qDot; //!< Heat release rate [W/m^3]
     dvec chargeDensity; //! Charge density [C/m^3]
+    dvec E; //! Electric field [V/m]
     dmatrix wDot; //!< species production rates [kmol/m^3*s]
     dvec Wmx; //!< mixture molecular weight [kg/kmol]
     dvec W; //!< species molecular weights [kg/kmol]
@@ -135,6 +138,7 @@ public:
     dvec cp; //!< mixture heat capacity [J/kg*K]
     dmatrix cpSpec; //!< species molar heat capacities [J/kmol*K]
     dmatrix rhoD; //!< density * diffusivity [kg/m*s]
+    dmatrix rhoMobi; //!< density * mobility [kg/m*s*V]
     dmatrix Dkt; //!< thermal diffusivity
     dmatrix hk; //!< species molar enthalpies [J/kmol]
     dmatrix jFick; //!< Fickian mass flux [kg/m^2*s]
