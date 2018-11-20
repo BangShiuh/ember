@@ -4,6 +4,7 @@
 FlameSolver::FlameSolver()
     : U(0, 0, Stride1X(1 ,1))
     , T(0, 0, Stride1X(1 ,1))
+    , E(0, 0, Stride1X(1, 1))
     , Y(0, 0, 0, StrideXX(1 ,1))
     , jCorrSolver(jCorrSystem)
     , strainfunc(NULL)
@@ -54,7 +55,7 @@ void FlameSolver::initialize(void)
     // Cantera initialization
     gas.initialize();
     nSpec = gas.nSpec;
-    nVars = nSpec + 2;
+    nVars = nSpec + 3;
     W.resize(nSpec);
     gas.getMolecularWeights(W);
 
@@ -138,7 +139,6 @@ void FlameSolver::setupStep()
     }
 
     updateChemicalProperties();
-
     updateBC();
     if (options.xFlameControl) {
         update_xStag(t, true); // calculate the value of rVzero
@@ -454,7 +454,7 @@ void FlameSolver::resizeAuxiliary()
 
     resizeMappedArrays();
 
-    ddtCross.topRows(2).setZero();
+    ddtCross.topRows(3).setZero();
     ddtCross.bottomRows(nSpec) *= NaN;
 
     rho.setZero(nPoints);
@@ -466,9 +466,10 @@ void FlameSolver::resizeAuxiliary()
     jCorr.resize(nPoints);
     sumcpj.setZero(nPoints);
     qDot.resize(nPoints);
-    chargeDensity.setZero(nPoints);
+    chargeDensity.resize(nPoints);
     cpSpec.resize(nSpec, nPoints);
     rhoD.resize(nSpec, nPoints);
+    rhoMobi.resize(nSpec, nPoints);
     Dkt.resize(nSpec, nPoints);
     wDot.resize(nSpec, nPoints);
     hk.resize(nSpec, nPoints);
@@ -543,6 +544,7 @@ void FlameSolver::resizeMappedArrays()
     resize(nVars, nPoints);
     remap(state, T, nPoints, kEnergy);
     remap(state, U, nPoints, kMomentum);
+    remap(state, E, nPoints, kElectric);
     remap(state, Y, nSpec, nPoints, kSpecies);
 }
 
@@ -591,6 +593,9 @@ void FlameSolver::updateCrossTerms()
     // dTdt due to gradients in species composition
     Eigen::Block<dmatrix, 1> dTdtCross = ddtCross.row(kEnergy);
 
+    // dEdt due to gradient in species composition
+    Eigen::Block<dmatrix, 1> dEdtCross = ddtCross.row(kElectric);
+
     dYdtCross.col(0).setZero();
     dYdtCross.col(jj).setZero();
     for (size_t j=1; j<jj; j++) {
@@ -607,6 +612,26 @@ void FlameSolver::updateCrossTerms()
         double dTdx = cfm[j] * T(j-1) + cf[j] * T(j) + cfp[j] * T(j+1);
         if (!options.quasi2d) {
             dTdtCross[j] = - 0.5 * (sumcpj[j] + sumcpj[j-1]) * dTdx / (cp[j] * rho[j]);
+        }
+    }
+
+    // add electric force cross term
+    if (options.transportModel == "Ion") {
+        assert(mathUtils::notnan(rhoMobi));
+        // Booundary conditions
+        E(0) = 0.0;
+        E(jj) = 0.0;
+        for (size_t j=1; j<jj; j++) {
+            for (size_t k : gas.kCharge) {
+                int s_k = gas.getSpeciesCharge(k) / std::abs(gas.getSpeciesCharge(k));
+                dYdtCross(k,j) += 0.125 / (r[j] * rho[j] * dlj[j]) * s_k *
+                    (rphalf[j] * (rhoMobi(k,j) + rhoMobi(k,j+1)) * (E(j) + E(j+1)) * (Y(k,j) + Y(k,j+1)) -
+                    rphalf[j-1] * (rhoMobi(k,j-1) + rhoMobi(k,j)) * (E(j-1) + E(j)) * (Y(k,j-1) + Y(k,j)));
+                double drift = E(j) * rhoMobi(k,j) * Y(k,j);
+                double diff = s_k * rhoD(k,j) * (Y(k,j) - Y(k,j-1)) / hh[j-1]; // use upwind value
+                dEdtCross[j] += Cantera::ElectronCharge / Cantera::epsilon_0 *
+                                Cantera::Avogadro / W[k] * (diff - drift);
+            }
         }
     }
 
@@ -669,6 +694,7 @@ void FlameSolver::updateChemicalProperties(size_t j1, size_t j2)
         rho[j] = gas.getDensity();
         Wmx[j] = gas.getMixtureMolecularWeight();
         cp[j] = gas.getSpecificHeatCapacity();
+        chargeDensity[j] = gas.getChargeDensity();
         gas.getSpecificHeatCapacities(&cpSpec(0,j));
         gas.getEnthalpies(&hk(0,j));
         thermoTimer.stop();
@@ -686,12 +712,12 @@ void FlameSolver::updateChemicalProperties(size_t j1, size_t j2)
 
         diffusivityTimer.start();
         gas.getWeightedDiffusionCoefficientsMass(&rhoD(0,j));
+        gas.getWeightedMobilities(&rhoMobi(0,j));
         gas.getThermalDiffusionCoefficients(&Dkt(0,j));
         diffusivityTimer.stop();
         transportTimer.stop();
     }
 }
-
 
 void FlameSolver::setDiffusionSolverState(double tInitial)
 {

@@ -13,6 +13,7 @@
 #include "quasi2d.h"
 #include "callback.h"
 
+
 #include <iostream>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/shared_ptr.hpp>
@@ -113,11 +114,12 @@ public:
     void integrateDiffusionTerms(size_t k1, size_t k2);
 
     size_t nSpec; //!< Number of chemical species
-    size_t nVars; //!< Number of state variables at each grid point (nSpec + 2)
+    size_t nVars; //!< Number of state variables at each grid point (nSpec + 3)
 
     // State variables:
     VecMap U; //!< normalized tangential velocity (u*a/u_inf) [1/s]
     VecMap T; //!< temperature [K]
+    VecMap E; //!< Electric field [v/m]
     MatrixMap Y; //!< species mass fractions, Y(k,j) [-]
 
     // Auxiliary variables:
@@ -135,6 +137,7 @@ public:
     dvec cp; //!< mixture heat capacity [J/kg*K]
     dmatrix cpSpec; //!< species molar heat capacities [J/kmol*K]
     dmatrix rhoD; //!< density * diffusivity [kg/m*s]
+    dmatrix rhoMobi; //!< density * mobility [kg/m*s*V]
     dmatrix Dkt; //!< thermal diffusivity
     dmatrix hk; //!< species molar enthalpies [J/kmol]
     dmatrix jFick; //!< Fickian mass flux [kg/m^2*s]

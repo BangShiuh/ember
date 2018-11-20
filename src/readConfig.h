@@ -6,7 +6,8 @@
 // indices of the respective equations / solution components
 const size_t kMomentum = 0;
 const size_t kEnergy = 1;
-const size_t kSpecies = 2;
+const size_t kElectric = 2;
+const size_t kSpecies = 3;
 const size_t kWmx = 2; // never used in the same systems as kSpecies
 
 //! Possible boundary conditions for the continuity equations
