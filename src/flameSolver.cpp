@@ -167,6 +167,19 @@ void FlameSolver::prepareIntegrators()
             diffusionTerms[kSpecies+k].B =rho.inverse();
             diffusionTerms[kSpecies+k].D = rhoD.row(k);
         }
+
+        // Calculate ambi-polar diffusion
+        if (options.transportModel == "Ion") {
+            dvec rhoD_ambi(nPoints);
+            dvec Y_sum(nPoints);
+            for (size_t k : gas.kCharge) {
+                if (gas.thermo.charge(k) > 0) {
+                    rhoD_ambi += rhoD.row(k) * Y.row(k);
+                }
+                Y_sum += Y.row(k);
+            }
+            rhoD_ambi /= Y_sum;
+        }
     } else {
         // Diffusion solvers: Energy and momentum
         diffusionTerms[kMomentum].B.setZero(nPoints);
