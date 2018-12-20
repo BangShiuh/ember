@@ -92,6 +92,10 @@ public:
 
     double pressure; //!< thermodynamic pressure [Pa]
     size_t nSpec; //!< number of species
+    vector<size_t> kNeutral;
+    vector<size_t> kCharge;
+
+    int getSpeciesCharge(size_t k) const;
 
     void setOptions(const ConfigOptions& options);
     void initialize();
@@ -123,6 +127,14 @@ public:
     //! `v[k] = -D[k] / X[k] * grad(X[k])`
     void getDiffusionCoefficientsMole(dvec& Dkm) const;
     void getDiffusionCoefficientsMole(double* Dkm) const;
+
+    void getMobilities(dvec& mobi_km) const;
+    void getMobilities(double* mobi_km) const;
+
+    void getWeightedMobilities(dvec& mobi_km) const;
+    void getWeightedMobilities(double* mobi_km) const;
+
+    double getChargeDensity() const;
 
     //! Get product of density and diffusion coefficients for calculating
     //! diffusive mass fluxes with respect to mole fraction gradients.
