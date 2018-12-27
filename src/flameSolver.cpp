@@ -171,14 +171,22 @@ void FlameSolver::prepareIntegrators()
         // Calculate ambi-polar diffusion
         if (options.transportModel == "Ion") {
             dvec rhoD_ambi(nPoints);
-            dvec Y_sum(nPoints);
-            for (size_t k : gas.kCharge) {
-                if (gas.thermo.charge(k) > 0) {
-                    rhoD_ambi += rhoD.row(k) * Y.row(k);
+            for (size_t j=0; j<nPoints; j++) {
+                // double sum = 0.0;
+                double rhoD_k = 0.0;
+                for (size_t k : gas.kCharge) {
+                    if (gas.thermo.charge(k) > 0) {
+                        rhoD_ambi[j] = 2.0 * std::max(rhoD(k,j), rhoD_k);
+                        rhoD_k = rhoD(k,j);
+                        // sum += Y(k,j);
+                    }
                 }
-                Y_sum += Y.row(k);
+                // rhoD_ambi[j] /= sum;
             }
-            rhoD_ambi /= Y_sum;
+            // Diffusion solvers: charged species
+            for (size_t k : gas.kCharge) {
+                diffusionTerms[kSpecies+k].D = rhoD_ambi;
+            }
         }
     } else {
         // Diffusion solvers: Energy and momentum
