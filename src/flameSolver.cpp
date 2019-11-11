@@ -127,6 +127,20 @@ void FlameSolver::setupStep()
         }
     #endif
 
+    // Update inlet mass fraction
+    if (options.t_inlet.size() > 1) {
+        double tNow_in = std::fmod(tNow, t_in[t_in.size()-1]);
+        dvec Yin(nSpec);
+        for (size_t k=0; k<nSpec; k++) {
+            dvec Y_in_k = Y_in.col(k);
+            Yin[k] = mathUtils::interp1(t_in, Y_in_k, tNow_in, false);
+        }
+        double Tin = mathUtils::interp1(t_in, T_in, tNow_in, false);
+        convectionSystem.setLeftBC(Tin, Yin);
+        gas.setStateMass(&Yin[0], T(grid.ju));
+        rhoLeft = gas.getDensity();
+    }
+
     // Reset boundary conditions to prevent numerical drift
     if (grid.leftBC == BoundaryCondition::FixedValue) {
         T(0) = Tleft;
@@ -975,6 +989,16 @@ void FlameSolver::loadProfile(void)
     } else {
         Y = options.Y_initial;
     }
+    t_in = options.t_inlet;
+    T_in = options.T_inlet;
+    if (options.Y_inlet.rows() == static_cast<dmatrix::Index>(nSpec) &&
+        options.Y_inlet.cols() == static_cast<dmatrix::Index>(t_in.size()) &&
+        t_in.size() != static_cast<int>(nSpec)) {
+        Y_in = options.Y_inlet.transpose();
+    } else {
+        Y_in = options.Y_inlet;
+    }
+
     convectionSystem.V = options.V_initial;
     convectionSystem.utwSystem.V = options.V_initial;
     rVzero = convectionSystem.utwSystem.V[0];

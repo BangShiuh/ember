@@ -120,6 +120,11 @@ public:
     VecMap T; //!< temperature [K]
     MatrixMap Y; //!< species mass fractions, Y(k,j) [-]
 
+    // Inlet gas composition
+    dvec t_in;
+    dvec T_in;
+    dmatrix Y_in;
+
     // Auxiliary variables:
     dvec rho; //!< density [kg/m^3]
     dvec drhodt; //!< time derivative of density [kg/m^3*s]
