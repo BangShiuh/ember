@@ -454,6 +454,9 @@ class InitialCondition(Options):
     #: create a new initial profile.
     restartFile = StringOption(None, level=1)
 
+    #: Read time profiles of reactants from the specified file for premixed flames
+    reactantsTimeProfiles = StringOption(None, level=1)
+
     #: "premixed", "diffusion", or "quasi2d"
     flameType = StringOption('premixed', ('diffusion', 'quasi2d'))
 
@@ -547,6 +550,14 @@ class InitialCondition(Options):
     #: Initial mass flux profile used if ``haveProfiles`` is set to ``True``
     V = Option(None, level=3)
 
+    #: Inlet time vector
+    t_in = Option(None, level=3)
+
+    #: Inlet mass fraction time profiles
+    Y_in = Option(None, level=3)
+
+    #: Inlet temperature time profile
+    T_in = Option(None, level=3)
 
 class WallFlux(Options):
     #: Reference temperature for the wall heat flux
@@ -969,6 +980,8 @@ class Config(object):
                                transport_model=None)
         if self.initialCondition.reactants.value is not None:
             gas.X = self.initialCondition.reactants.value
+        elif self.initialCondition.reactantsTimeProfiles:
+            pass
         else:
             gas.X = self.initialCondition.fuel.value
             gas.X = self.initialCondition.oxidizer.value
@@ -1124,13 +1137,36 @@ class ConcreteConfig(_ember.ConfigOptions):
             else:
                 self.general.fixedBurnedVal = True
 
+        if self.initialCondition.reactantsTimeProfiles:
+            self.readReactantsTimeProfiles(self.initialCondition.reactantsTimeProfiles)
+
         if self.initialCondition.flameType == 'quasi2d':
             self.setupQuasi2d()
         elif self.initialCondition.restartFile:
             self.readInitialCondition(self.initialCondition.restartFile)
         elif not self.initialCondition.haveProfiles:
             self.generateInitialCondition()
+
         self.apply_options()
+
+    def readReactantsTimeProfiles(self, reactantsTimeProfiles):
+        """
+        Read the time profiles for species mass fractions from
+        the specified input file.
+        """
+         # local import avoids explicit dependence of ember on pandas
+        import pandas as pd
+        IC = self.initialCondition
+        gas = self.gas
+        data = pd.read_hdf(reactantsTimeProfiles)
+        IC.t_in = np.array(data["t"])
+        IC.T_in = np.array(data["T"])
+        IC.Y_in = np.zeros(shape=(gas.n_species, len(IC.t_in)))
+        for k in range(gas.n_species):
+            if gas.species_name(k) in data:
+                IC.Y_in[k] = data[gas.species_name(k)].values
+            elif "Y_"+gas.species_name(k) in data:
+                IC.Y_in[k] = data["Y_"+gas.species_name(k)].values
 
     def readInitialCondition(self, restartFile):
         """
@@ -1147,7 +1183,8 @@ class ConcreteConfig(_ember.ConfigOptions):
 
         IC.haveProfiles = True
         if any(map(IC.isSet, ('fuel', 'oxidizer', 'Tfuel', 'Toxidizer', 'reactants',
-                              'equivalenceRatio', 'Tcounterflow', 'counterflow'))):
+                              'equivalenceRatio', 'Tcounterflow', 'counterflow',
+                              'reactantsTimeProfiles'))):
             self.setBoundaryValues(IC.T, IC.Y, IC.V)
 
     def setBoundaryValues(self, T, Y, V=None):
@@ -1159,6 +1196,9 @@ class ConcreteConfig(_ember.ConfigOptions):
             # Reactants
             if IC.reactants:
                 gas.X = IC.reactants
+            elif IC.reactantsTimeProfiles:
+                gas.Y = IC.Y_in.T[:][0]
+                IC.Tu = IC.T_in[0]
             else:
                 gas.set_equivalence_ratio(IC.equivalenceRatio, IC.fuel, IC.oxidizer)
 
