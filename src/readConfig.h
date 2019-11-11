@@ -116,6 +116,11 @@ public:
     dvec V_initial; //!< [initialCondition.V]
     dmatrix Y_initial; //!< [initialCondition.Y]
 
+    // Time profiles of inlet gas composition
+    dvec t_inlet;
+    dvec T_inlet;
+    dmatrix Y_inlet;
+
     //! If false, energy, continuity, and momentum equations are integrated
     //! normally. If true, then time is actually a surrogate for a spatial
     //! variable and the temperature and velocity fields are interpolated from

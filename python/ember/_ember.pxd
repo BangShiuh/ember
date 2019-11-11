@@ -71,8 +71,8 @@ cdef extern from "readConfig.h":
         string strainFunctionType
         double strainRateInitial, strainRateFinal, strainRateDt, strainRateT0
 
-        CxxEigenVec x_initial, T_initial, U_initial, V_initial
-        CxxEigenMatrix Y_initial
+        CxxEigenVec x_initial, T_initial, U_initial, V_initial, t_inlet, T_inlet
+        CxxEigenMatrix Y_initial, Y_inlet
 
         cbool quasi2d
         string interpFile

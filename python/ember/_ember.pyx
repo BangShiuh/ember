@@ -236,6 +236,19 @@ cdef class ConfigOptions:
         w, h = Y.shape[0], Y.shape[1]
         opts.Y_initial = map_matrix(&Y[0,0], h, w, h, 1)
 
+        if IC.t_in is not None:
+            # Inlet time profiles
+            data = np.ascontiguousarray(IC.t_in)
+            opts.t_inlet = map_vector(&data[0], len(data), 1)
+
+            data = np.ascontiguousarray(IC.T_in)
+            opts.T_inlet = map_vector(&data[0], len(data), 1)
+
+            # Numpy defaults to row major; Eigen is column major
+            Y = np.ascontiguousarray(IC.Y_in.T)
+            w, h = Y.shape[0], Y.shape[1]
+            opts.Y_inlet = map_matrix(&Y[0,0], h, w, h, 1)
+
         opts.flameType = stringify(IC.flameType)
         opts.pressure = IC.pressure
         opts.quasi2d = IC.flameType == 'quasi2d'
