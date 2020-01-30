@@ -76,6 +76,7 @@ void FlameSolver::initialize(void)
     if (options.wallFlux) {
         diffusionTerms[kEnergy].yInf = options.Tinf;
         diffusionTerms[kEnergy].wallConst = options.Kwall;
+        rVzero = options.rVwall;
     }
 
     resizeAuxiliary();
