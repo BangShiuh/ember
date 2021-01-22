@@ -1158,7 +1158,7 @@ class ConcreteConfig(_ember.ConfigOptions):
         import pandas as pd
         IC = self.initialCondition
         gas = self.gas
-        data = pd.read_hdf(reactantsTimeProfiles)
+        data = pd.read_csv(reactantsTimeProfiles)
         IC.t_in = np.array(data["t"])
         IC.T_in = np.array(data["T"])
         IC.Y_in = np.zeros(shape=(gas.n_species, len(IC.t_in)))
