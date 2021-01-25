@@ -1244,6 +1244,9 @@ class ConcreteConfig(_ember.ConfigOptions):
 
             # Oxidizer
             gas.TPX = IC.Toxidizer, IC.pressure, IC.oxidizer
+            if IC.reactantsTimeProfiles:
+                gas.TPY = IC.T_in[0], IC.pressure, IC.Y_in.T[:][0]
+
             if IC.equilibrateCounterflow:
                 gas.equilibrate(IC.equilibrateCounterflow)
             rhou = gas.density  # use oxidizer value for diffusion flame
