@@ -128,14 +128,13 @@ void FlameSolver::setupStep()
     #endif
 
     // Update inlet mass fraction
-    if (options.t_inlet.size() > 1) {
-        double tNow_in = std::fmod(tNow, t_in[t_in.size()-1]);
+    if (options.t_inlet.size() > 1 && tNow < t_in[t_in.size()-1]) {
         dvec Yin(nSpec);
         for (size_t k=0; k<nSpec; k++) {
             dvec Y_in_k = Y_in.col(k);
-            Yin[k] = mathUtils::interp1(t_in, Y_in_k, tNow_in, false);
+            Yin[k] = mathUtils::interp1(t_in, Y_in_k, tNow, false);
         }
-        double Tin = mathUtils::interp1(t_in, T_in, tNow_in, false);
+        double Tin = mathUtils::interp1(t_in, T_in, tNow, false);
         convectionSystem.setLeftBC(Tin, Yin);
         gas.setStateMass(&Yin[0], T(grid.ju));
         rhoLeft = gas.getDensity();
