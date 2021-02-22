@@ -128,16 +128,17 @@ void FlameSolver::setupStep()
     #endif
 
     // Update inlet mass fraction
-    if (options.t_inlet.size() > 1 && tNow < t_in[t_in.size()-1]) {
+    if (t_in.size() > 1 && nTotal < t_in.size()-1) {
         dvec Yin(nSpec);
         for (size_t k=0; k<nSpec; k++) {
             dvec Y_in_k = Y_in.col(k);
-            Yin[k] = mathUtils::interp1(t_in, Y_in_k, tNow, false);
+            Yin[k] = Y_in_k[nTotal];
         }
-        double Tin = mathUtils::interp1(t_in, T_in, tNow, false);
-        convectionSystem.setLeftBC(Tin, Yin);
+        convectionSystem.setLeftBC(T_in[nTotal], Yin);
         gas.setStateMass(&Yin[0], T(grid.ju));
         rhoLeft = gas.getDensity();
+        options.globalTimestep = t_in[nTotal+1] - t_in[nTotal];
+        dt = options.globalTimestep;
     }
 
     // Reset boundary conditions to prevent numerical drift
@@ -588,6 +589,7 @@ void FlameSolver::updateCrossTerms()
     jCorrSystem.splitConst.setZero(nPoints);
 
     double dt = options.globalTimestep;
+
     for (size_t j=1; j<jj; j++) {
         dt = std::min(dt, options.diffusionTimestepMultiplier*dlj[j]*dlj[j]/(jCorrSystem.B[j]));
     }
