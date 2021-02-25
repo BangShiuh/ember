@@ -160,7 +160,7 @@ public:
     void getDestructionRates(dvec& wDot) const;
     void getDestructionRates(double* wDot) const;
 
-    Cantera::IdealGasPhase thermo;
+    Cantera::IdealGasPhase* thermo;
 
 private:
     std::string mechanismFile;
